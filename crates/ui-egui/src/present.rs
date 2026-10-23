@@ -29,7 +29,7 @@ use figcraft_doc::proto::{
 };
 use figcraft_doc::{Document, HConstraint, Node, NodeId, NodeKind, VConstraint};
 use figcraft_geom::{Affine, Point};
-use figcraft_layout::{layout_page, NoMeasure};
+use figcraft_layout::{NoMeasure, layout_page};
 use serde_json::{Value, json};
 
 use crate::FigApp;
