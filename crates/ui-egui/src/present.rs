@@ -29,6 +29,7 @@ use figcraft_doc::proto::{
 };
 use figcraft_doc::{Document, HConstraint, Node, NodeId, NodeKind, VConstraint};
 use figcraft_geom::{Affine, Point};
+use figcraft_layout::{layout_page, NoMeasure};
 use serde_json::{Value, json};
 
 use crate::FigApp;
@@ -504,6 +505,10 @@ impl Presenter {
                 figcraft_engine::cmd::proto::respond(d, self.current, size);
             }
             figcraft_engine::proto_run::play_interactions(d);
+            // Re-run auto layout so variant size changes (e.g. button hover) re-flow parents.
+            if let Some(page) = d.pages.first().copied() {
+                layout_page(d, page, &NoMeasure);
+            }
             raise_fixed(d);
         }
         self.uses_pads = d.as_ref().is_some_and(figcraft_doc::proto::uses_gamepad);

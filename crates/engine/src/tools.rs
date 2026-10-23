@@ -433,7 +433,7 @@ pub struct PenPath {
     pub join: Option<usize>,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct ToolState {
     pub tool: ToolId,
     pub(crate) gesture: Gesture,
@@ -452,7 +452,7 @@ pub struct ToolState {
     /// Pen snap targets, kept while hovering (see `vectoredit::point_snap`).
     pub(crate) pen_targets: Option<crate::vectoredit::point_snap::PenTargets>,
     /// The Scale tool's anchor: column and row (0 start, 1 middle, 2 end) of the point of the
-    /// selection box that stays put (`tool.scaleAnchor`).
+    /// selection box that stays put (`tool.scaleAnchor`). Default is centre (1, 1) to match Figma.
     pub scale_anchor: (u8, u8),
     /// The last drag move handled (a held button repeats it every frame).
     pub(crate) last_move: Option<PointerEvent>,
@@ -462,6 +462,27 @@ pub struct ToolState {
     pub labels: Vec<(NodeId, [Point; 4])>,
     /// The brush the Pencil draws with (`tool.pencilBrush`; `None`: a plain stroke).
     pub pencil_brush: Option<figcraft_doc::Brush>,
+}
+
+impl Default for ToolState {
+    fn default() -> Self {
+        Self {
+            tool: ToolId::Move,
+            gesture: Gesture::None,
+            overlay: Overlay::default(),
+            pen: None,
+            temp_from: None,
+            last_hover: None,
+            shape_builder: None,
+            builder_remove: false,
+            redlines: false,
+            pen_targets: None,
+            scale_anchor: (1, 1), // centre, matching Figma's default scale behavior
+            last_move: None,
+            labels: Vec::new(),
+            pencil_brush: None,
+        }
+    }
 }
 
 /// Pen pressure along drawn samples as width profile points `[t, scale]`: `t` by length, at most
