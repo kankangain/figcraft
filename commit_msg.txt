@@ -1,7 +1,0 @@
-feat: interactive components state sharing and reset state option
-
-- Add reset_component_state field to Interaction (Figma's "Reset component state" checkbox)
-- Implement state sharing across frames for matching component instances in prototype player
-- Add resetComponentState parameter to proto.interaction.add and proto.interaction.set commands
-- Add tests: smart animate interpolation, state sharing across frames, reset state disables sharing
-- Update prototyping-parity.md with new features and test references

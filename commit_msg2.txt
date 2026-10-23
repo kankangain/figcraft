@@ -1,6 +1,0 @@
-fix: formatting and missing reset_component_state field in tests
-
-- Fix rustfmt formatting for perform/perform_at functions
-- Add missing reset_component_state field to Interaction constructors in tests
-- Fix unused variable warning (_knob)
-- Add missing 8th argument to perform() calls in tests
