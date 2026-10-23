@@ -407,7 +407,15 @@ fn add(s: &mut Session, p: &Value) -> Result<Value> {
         };
         let transition: Transition = parse(cmd, p, "transition")?.unwrap_or_default();
         let easing: Easing = parse(cmd, p, "easing")?.unwrap_or_default();
-        Interaction { trigger, actions, transition, duration_ms: duration(p).unwrap_or(300), easing, delay_ms: 0, reset_component_state: parse(cmd, p, "resetComponentState")?.unwrap_or_default() }
+        Interaction {
+            trigger,
+            actions,
+            transition,
+            duration_ms: duration(p).unwrap_or(300),
+            easing,
+            delay_ms: 0,
+            reset_component_state: parse(cmd, p, "resetComponentState")?.unwrap_or_default(),
+        }
     };
     let mut it = it;
     it.delay_ms = delay(cmd, p)?.unwrap_or(0);

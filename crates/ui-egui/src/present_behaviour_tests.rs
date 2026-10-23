@@ -214,7 +214,7 @@ fn player(doc: Document, start: NodeId) -> Presenter {
 
 fn act(p: &mut Presenter, a: Action, now: f64) -> bool {
     let node = p.current;
-    p.perform(&a, node, Transition::Instant, 0.0, Easing::Linear, None, now)
+    p.perform(&a, node, Transition::Instant, 0.0, Easing::Linear, None, now, false)
 }
 
 fn open(dest: NodeId, close_on_outside: bool) -> Action {
@@ -309,7 +309,7 @@ fn back_plays_the_way_in_backwards_and_restart_starts_over() {
     let mut p = player(doc, a);
     let go = |p: &mut Presenter, dest, tr, now| {
         let node = p.current;
-        p.perform(&Action::Navigate { dest, preserve_scroll: false }, node, tr, 0.3, Easing::Linear, None, now)
+        p.perform(&Action::Navigate { dest, preserve_scroll: false }, node, tr, 0.3, Easing::Linear, None, now, false)
     };
     assert!(go(&mut p, b, Transition::Push { direction: Direction::Left }, 1.0));
     assert!(go(&mut p, c, Transition::MoveIn { direction: Direction::Top }, 2.0));
@@ -460,8 +460,9 @@ fn interactive_components_smart_animate_interpolates_position() {
     let mut s = Session::new();
     let mut variants = Vec::new();
     for (k, state) in ["Off", "On"].iter().enumerate() {
-        let f = id(&ex(&mut s, "frame.create", json!({"x": k as f64 * 150.0, "y": 600, "width": 60, "height": 30, "name": format!("State={state}")})));
-        let knob = rect(&mut s, "Knob", f, [if k == 0 { 0.0 } else { 30.0 }, 0.0, 30.0, 30.0]);
+        let f =
+            id(&ex(&mut s, "frame.create", json!({"x": k as f64 * 150.0, "y": 600, "width": 60, "height": 30, "name": format!("State={state}")})));
+        let _knob = rect(&mut s, "Knob", f, [if k == 0 { 0.0 } else { 30.0 }, 0.0, 30.0, 30.0]);
         variants.push(id(&ex(&mut s, "component.create", json!({"ids": [f]}))));
     }
     let set = id(&ex(&mut s, "component.combineVariants", json!({"ids": variants.clone()})));
@@ -470,28 +471,28 @@ fn interactive_components_smart_animate_interpolates_position() {
     on(&mut s, on_, json!({"type": "onClick"}), json!({"type": "changeTo", "dest": off}), json!({"type": "smartAnimate"}), 200);
     let screen = frame(&mut s, "Screen", 0.0, 300.0, 400.0);
     let toggle = id(&ex(&mut s, "instance.create", json!({"component": set, "x": 20, "y": 20, "parent": screen})));
-    
+
     let mut p = player(s.doc().unwrap().clone(), screen);
-    
+
     // Click to change to On - knob should animate from x=0 to x=30
     assert!(p.fire(toggle, 0, None, 1.0), "Off's click: changes to On");
     assert_eq!(p.anim.as_ref().map(|x| x.transition), Some(Transition::SmartAnimate));
-    
+
     // Check interpolation at t=0.5 (halfway through animation)
     let doc = p.doc.as_ref().unwrap();
     let from_doc = p.anim.as_ref().unwrap().from_doc.clone();
     let mid = smart_interpolate(&from_doc, screen, doc, screen, 0.5);
-    
+
     // Find the knob in the interpolated document by name path (Screen -> Toggle -> Knob)
     let knob_id = mid.subtree(screen).into_iter().skip(1).find(|i| mid.node(*i).map(|n| n.name == "Knob").unwrap_or(false)).unwrap();
-    
+
     // Knob should be at x=15 (halfway between 0 and 30) relative to toggle
     let knob_bounds = mid.world_bounds(knob_id).unwrap();
     let screen_bounds = mid.world_bounds(screen).unwrap();
     let knob_x = knob_bounds.x0 - screen_bounds.x0;
     // Toggle is at x=20, knob at halfway (15) = 35 absolute
     assert!((knob_x - 35.0).abs() < 1.0, "knob at t=0.5 should be at x≈35 (20 + 15), got {}", knob_x);
-    
+
     // Click again to change back to Off
     assert!(p.fire(toggle, 0, None, 2.0), "On's click: back to Off");
 }
@@ -502,7 +503,8 @@ fn interactive_components_state_sharing_across_frames() {
     let mut s = Session::new();
     let mut variants = Vec::new();
     for (k, state) in ["Off", "On"].iter().enumerate() {
-        let f = id(&ex(&mut s, "frame.create", json!({"x": k as f64 * 150.0, "y": 600, "width": 60, "height": 30, "name": format!("State={state}")})));
+        let f =
+            id(&ex(&mut s, "frame.create", json!({"x": k as f64 * 150.0, "y": 600, "width": 60, "height": 30, "name": format!("State={state}")})));
         rect(&mut s, "Knob", f, [if k == 0 { 0.0 } else { 30.0 }, 0.0, 30.0, 30.0]);
         variants.push(id(&ex(&mut s, "component.create", json!({"ids": [f]}))));
     }
@@ -510,35 +512,35 @@ fn interactive_components_state_sharing_across_frames() {
     let (off, on_) = (variants[0], variants[1]);
     on(&mut s, off, json!({"type": "onClick"}), json!({"type": "changeTo", "dest": on_}), json!({"type": "smartAnimate"}), 200);
     on(&mut s, on_, json!({"type": "onClick"}), json!({"type": "changeTo", "dest": off}), json!({"type": "smartAnimate"}), 200);
-    
+
     // Two frames with instances of the same component set
     let screen1 = frame(&mut s, "Screen1", 0.0, 300.0, 400.0);
     let screen2 = frame(&mut s, "Screen2", 500.0, 300.0, 400.0);
     let toggle1 = id(&ex(&mut s, "instance.create", json!({"component": set, "x": 20, "y": 20, "parent": screen1})));
     let toggle2 = id(&ex(&mut s, "instance.create", json!({"component": set, "x": 20, "y": 20, "parent": screen2})));
-    
+
     // Navigate to screen1
     let mut p = player(s.doc().unwrap().clone(), screen1);
-    
+
     // Click toggle1 to change to On
     assert!(p.fire(toggle1, 0, None, 1.0), "toggle1 click: changes to On");
-    
+
     // Navigate to screen2 (state sharing should have updated toggle2 to On)
     p.go(screen2, Transition::Instant, 0.0, Easing::Linear, 2.0, true, false);
-    
+
     // Check that toggle2 is now showing the On variant
     let shows = |p: &Presenter| match p.doc.as_ref().and_then(|d| d.node(toggle2)).map(|n| &n.kind) {
         Some(NodeKind::Instance { component, .. }) => Some(*component),
         _ => None,
     };
     assert_eq!(shows(&p), Some(on_), "state sharing: toggle2 on screen2 should also be On");
-    
+
     // Click toggle2 to change back to Off
     assert!(p.fire(toggle2, 0, None, 3.0), "toggle2 click: back to Off");
-    
+
     // Navigate back to screen1 (state sharing should have updated toggle1 to Off)
     p.go(screen1, Transition::Instant, 0.0, Easing::Linear, 4.0, true, false);
-    
+
     let shows1 = |p: &Presenter| match p.doc.as_ref().and_then(|d| d.node(toggle1)).map(|n| &n.kind) {
         Some(NodeKind::Instance { component, .. }) => Some(*component),
         _ => None,
@@ -552,7 +554,8 @@ fn interactive_components_reset_component_state_disables_sharing() {
     let mut s = Session::new();
     let mut variants = Vec::new();
     for (k, state) in ["Off", "On"].iter().enumerate() {
-        let f = id(&ex(&mut s, "frame.create", json!({"x": k as f64 * 150.0, "y": 600, "width": 60, "height": 30, "name": format!("State={state}")})));
+        let f =
+            id(&ex(&mut s, "frame.create", json!({"x": k as f64 * 150.0, "y": 600, "width": 60, "height": 30, "name": format!("State={state}")})));
         rect(&mut s, "Knob", f, [if k == 0 { 0.0 } else { 30.0 }, 0.0, 30.0, 30.0]);
         variants.push(id(&ex(&mut s, "component.create", json!({"ids": [f]}))));
     }
@@ -563,32 +566,32 @@ fn interactive_components_reset_component_state_disables_sharing() {
     // Patch the interaction to set resetComponentState=true
     ex(&mut s, "proto.interaction.set", json!({"id": off, "index": 0, "resetComponentState": true}));
     on(&mut s, on_, json!({"type": "onClick"}), json!({"type": "changeTo", "dest": off}), json!({"type": "smartAnimate"}), 200);
-    
+
     let screen1 = frame(&mut s, "Screen1", 0.0, 300.0, 400.0);
     let screen2 = frame(&mut s, "Screen2", 500.0, 300.0, 400.0);
     let toggle1 = id(&ex(&mut s, "instance.create", json!({"component": set, "x": 20, "y": 20, "parent": screen1})));
     let toggle2 = id(&ex(&mut s, "instance.create", json!({"component": set, "x": 20, "y": 20, "parent": screen2})));
-    
+
     let mut p = player(s.doc().unwrap().clone(), screen1);
-    
+
     // Click toggle1 to change to On
     assert!(p.fire(toggle1, 0, None, 1.0), "toggle1 click: changes to On");
-    
+
     // Navigate to screen2 (state sharing should be DISABLED, so toggle2 should still be Off)
     p.go(screen2, Transition::Instant, 0.0, Easing::Linear, 2.0, true, false);
-    
+
     let shows = |p: &Presenter| match p.doc.as_ref().and_then(|d| d.node(toggle2)).map(|n| &n.kind) {
         Some(NodeKind::Instance { component, .. }) => Some(*component),
         _ => None,
     };
     assert_eq!(shows(&p), Some(off), "resetComponentState: toggle2 on screen2 should remain Off");
-    
+
     // Click toggle2 to change to On (independently)
     assert!(p.fire(toggle2, 0, None, 3.0), "toggle2 click: changes to On independently");
-    
+
     // Navigate back to screen1 (toggle1 should still be On, not affected by toggle2)
     p.go(screen1, Transition::Instant, 0.0, Easing::Linear, 4.0, true, false);
-    
+
     let shows1 = |p: &Presenter| match p.doc.as_ref().and_then(|d| d.node(toggle1)).map(|n| &n.kind) {
         Some(NodeKind::Instance { component, .. }) => Some(*component),
         _ => None,
