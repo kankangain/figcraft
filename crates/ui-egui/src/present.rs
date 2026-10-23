@@ -746,7 +746,7 @@ impl Presenter {
         let snap = if temp.is_some() && self.temp.is_none() { self.snapshot() } else { None };
         let mut did = false;
         for a in &it.actions {
-            did |= self.perform(a, node, it.transition, dur, it.easing, rect, now);
+            did |= self.perform(a, node, it.transition, dur, it.easing, rect, now, it.reset_component_state);
         }
         if did && let (Some(press), Some(snap), Some(rect)) = (temp, snap, rect) {
             self.temp = Some(Temp { rect, press, snap, transition: it.transition, dur, easing: it.easing });
@@ -772,13 +772,13 @@ impl Presenter {
         error
     }
 
-    fn perform(&mut self, a: &Action, node: NodeId, tr: Transition, dur: f64, easing: Easing, rect: Option<Rect>, now: f64) -> bool {
-        self.perform_at(a, node, tr, dur, easing, rect, now, 0)
+    fn perform(&mut self, a: &Action, node: NodeId, tr: Transition, dur: f64, easing: Easing, rect: Option<Rect>, now: f64, reset_component_state: bool) -> bool {
+        self.perform_at(a, node, tr, dur, easing, rect, now, 0, reset_component_state)
     }
 
     /// One action; `depth` counts the conditional actions it is inside.
     #[allow(clippy::too_many_arguments)]
-    fn perform_at(&mut self, a: &Action, node: NodeId, tr: Transition, dur: f64, easing: Easing, rect: Option<Rect>, now: f64, depth: usize) -> bool {
+    fn perform_at(&mut self, a: &Action, node: NodeId, tr: Transition, dur: f64, easing: Easing, rect: Option<Rect>, now: f64, depth: usize, reset_component_state: bool) -> bool {
         let Some(doc) = self.doc.clone() else { return false };
         match a {
             Action::Navigate { dest, preserve_scroll } => {
@@ -885,6 +885,43 @@ impl Presenter {
                     *component = *dest;
                 }
                 figcraft_engine::components::sync_instance(d, inst);
+                // State sharing: if reset_component_state is false, update all matching instances
+                // of the same component set to the same variant (Figma's state sharing behavior).
+                if !reset_component_state {
+                    if let Some(set) = figcraft_engine::components::variant_set(d, *dest) {
+                        let variant_name = d.node(*dest).map(|n| n.name.clone()).unwrap_or_default();
+                        // Collect instance IDs first to avoid modifying the document while iterating.
+                        let instance_ids: Vec<NodeId> = d.nodes()
+                            .filter(|id| {
+                                d.node(*id).map(|n| matches!(n.kind, NodeKind::Instance { .. })).unwrap_or(false)
+                            })
+                            .collect();
+                        for id in instance_ids {
+                            if let Some(n) = d.node(id)
+                                && let NodeKind::Instance { component, .. } = &n.kind
+                                && figcraft_engine::components::variant_set(d, *component) == Some(set)
+                            {
+                                // Find the variant with the same name in this instance's component set
+                                if let Some(matching_variant) = d.node(*component)
+                                    .and_then(|c| c.parent)
+                                    .and_then(|p| d.node(p))
+                                    .and_then(|set_node| {
+                                        set_node.children.iter().copied().find(|v| {
+                                            d.node(*v).map(|vn| vn.name == variant_name).unwrap_or(false)
+                                        })
+                                    })
+                                {
+                                    if let Some(inst_node) = d.node_mut(id)
+                                        && let NodeKind::Instance { component: inst_comp, .. } = &mut inst_node.kind
+                                    {
+                                        *inst_comp = matching_variant;
+                                    }
+                                    figcraft_engine::components::sync_instance(d, id);
+                                }
+                            }
+                        }
+                    }
+                }
                 self.relayout();
                 true
             }
@@ -911,7 +948,7 @@ impl Presenter {
                 // Evaluated now: earlier actions of the interaction may have changed variables.
                 let mut did = false;
                 for inner in figcraft_engine::proto_run::branch(&doc, node, blocks) {
-                    did |= self.perform_at(&inner, node, tr, dur, easing, rect, now, depth + 1);
+                    did |= self.perform_at(&inner, node, tr, dur, easing, rect, now, depth + 1, reset_component_state);
                 }
                 did
             }
