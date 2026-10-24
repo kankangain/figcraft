@@ -540,8 +540,15 @@ impl Gen {
                 Easing::Gentle,
                 Easing::CustomBezier { x1: 0.25, y1: 0.125, x2: 0.5, y2: 1.0 },
             ]);
-            let it =
-                Interaction { trigger, actions: vec![action], transition, duration_ms: 10 * (1 + self.r.below(100) as u32), easing, delay_ms: 0, reset_component_state: false };
+            let it = Interaction {
+                trigger,
+                actions: vec![action],
+                transition,
+                duration_ms: 10 * (1 + self.r.below(100) as u32),
+                easing,
+                delay_ms: 0,
+                reset_component_state: false,
+            };
             let fixed = self.r.chance(20);
             let n = self.doc.node_mut(id).unwrap();
             n.interactions.push(it);

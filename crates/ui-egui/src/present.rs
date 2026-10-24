@@ -908,13 +908,10 @@ impl Presenter {
                 figcraft_engine::components::sync_instance(d, inst);
                 // State sharing: if reset_component_state is false, update all matching instances
                 // of the same component set within the same top-level frame (Figma's state sharing behavior).
-                if !reset_component_state
-                    && let Some(set) = figcraft_engine::components::variant_set(d, *dest)
-                {
+                if !reset_component_state && let Some(set) = figcraft_engine::components::variant_set(d, *dest) {
                     let variant_name = d.node(*dest).map(|n| n.name.clone()).unwrap_or_default();
                     // Find the top-level frame containing the triggering instance.
-                    let top_frame =
-                        d.ancestors(inst).into_iter().find(|a| d.node(*a).is_some_and(|n| n.parent == Some(d.pages[0]))).unwrap_or(inst);
+                    let top_frame = d.ancestors(inst).into_iter().find(|a| d.node(*a).is_some_and(|n| n.parent == Some(d.pages[0]))).unwrap_or(inst);
                     // Collect instance IDs in the same top-level frame.
                     let instance_ids: Vec<NodeId> = d
                         .subtree(top_frame)
@@ -927,11 +924,9 @@ impl Presenter {
                             && figcraft_engine::components::variant_set(d, *component) == Some(set)
                         {
                             // Find the variant with the same name in this instance's component set
-                            if let Some(matching_variant) =
-                                d.node(*component).and_then(|c| c.parent).and_then(|p| d.node(p)).and_then(|set_node| {
-                                    set_node.children.iter().copied().find(|v| d.node(*v).map(|vn| vn.name == variant_name).unwrap_or(false))
-                                })
-                            {
+                            if let Some(matching_variant) = d.node(*component).and_then(|c| c.parent).and_then(|p| d.node(p)).and_then(|set_node| {
+                                set_node.children.iter().copied().find(|v| d.node(*v).map(|vn| vn.name == variant_name).unwrap_or(false))
+                            }) {
                                 if let Some(inst_node) = d.node_mut(id)
                                     && let NodeKind::Instance { component: inst_comp, .. } = &mut inst_node.kind
                                 {
