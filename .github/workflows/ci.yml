@@ -31,7 +31,7 @@ jobs:
   test:
     timeout-minutes: 35
     name: test (ubuntu-latest)
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
 
@@ -73,7 +73,7 @@ jobs:
   wasm:
     timeout-minutes: 30
     name: wasm32 check
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
