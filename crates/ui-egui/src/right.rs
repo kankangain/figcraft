@@ -588,30 +588,78 @@ fn position(app: &mut FigApp, ui: &mut Ui, doc: &Document, sel: &[NodeId]) {
 }
 
 fn position_fields(app: &mut FigApp, ui: &mut Ui, doc: &Document, sel: &[NodeId]) {
+    let t = Tokens::get(ui.ctx());
     let ids = sel.to_vec();
     let col = widgets::col_width(ui.available_width());
-    widgets::sublabels(ui, tr("Alignment"), None);
+    // Alignment grid: 3x3 buttons like Figma.
+    let can_align = figcraft_engine::cmd::arrange::can_align(doc, sel);
+    let h_align = common(doc, sel, |n| n.constraints.horizontal);
+    let v_align = common(doc, sel, |n| n.constraints.vertical);
+    let align_grid = [
+        [
+            (Icon::AlignLeft, HConstraint::Left, VConstraint::Top),
+            (Icon::AlignHCenter, HConstraint::Center, VConstraint::Top),
+            (Icon::AlignRight, HConstraint::Right, VConstraint::Top),
+        ],
+        [
+            (Icon::AlignLeft, HConstraint::Left, VConstraint::Center),
+            (Icon::AlignHCenter, HConstraint::Center, VConstraint::Center),
+            (Icon::AlignRight, HConstraint::Right, VConstraint::Center),
+        ],
+        [
+            (Icon::AlignLeft, HConstraint::Left, VConstraint::Bottom),
+            (Icon::AlignHCenter, HConstraint::Center, VConstraint::Bottom),
+            (Icon::AlignRight, HConstraint::Right, VConstraint::Bottom),
+        ],
+    ];
     row(ui, 32.0, |ui| {
-        let cmds = ["align.left", "align.hcenter", "align.right", "align.top", "align.vcenter", "align.bottom"];
-        let tip = crate::shortcuts::tip;
-        let items = [
-            (Icon::AlignLeft, tip(tr("Align left"), cmds[0])),
-            (Icon::AlignHCenter, tip(tr("Align horizontal centers"), cmds[1])),
-            (Icon::AlignRight, tip(tr("Align right"), cmds[2])),
-            (Icon::AlignTop, tip(tr("Align top"), cmds[3])),
-            (Icon::AlignVCenter, tip(tr("Align vertical centers"), cmds[4])),
-            (Icon::AlignBottom, tip(tr("Align bottom"), cmds[5])),
-        ];
-        let w = col / 3.0;
-        let picked = ui.add_enabled_ui(figcraft_engine::cmd::arrange::can_align(doc, sel), |ui| {
-            let h = widgets::segmented(ui, &items[..3], None, w);
-            let v = widgets::segmented(ui, &items[3..], None, w).map(|i| i + 3);
-            h.or(v)
+        let btn_w = (col - 16.0) / 3.0;
+        ui.add_enabled_ui(can_align, |ui| {
+            for row_idx in 0..3 {
+                ui.horizontal(|ui| {
+                    for col_idx in 0..3 {
+                        let (icon, h, v) = align_grid[row_idx][col_idx];
+                        let on = match h_align {
+                            Some(HConstraint::Left) => col_idx == 0 && row_idx == 1,
+                            Some(HConstraint::Center) => col_idx == 1,
+                            Some(HConstraint::Right) => col_idx == 2 && row_idx == 1,
+                            _ => col_idx == 1 && row_idx == 1,
+                        } && match v_align {
+                            Some(VConstraint::Top) => row_idx == 0,
+                            Some(VConstraint::Center) => row_idx == 1,
+                            Some(VConstraint::Bottom) => row_idx == 2,
+                            _ => row_idx == 1,
+                        };
+                        let (r, resp) = ui.allocate_exact_size(vec2(btn_w, 26.0), Sense::click());
+                        let bg = if on { t.accent } else { t.field };
+                        let stroke = if resp.hovered() { t.field_hover_border } else { t.border };
+                        ui.painter().rect_filled(r, CornerRadius::same(5), bg);
+                        ui.painter().rect_stroke(r, CornerRadius::same(5), Stroke::new(1.0, stroke), egui::StrokeKind::Inside);
+                        icons::paint(ui.painter(), Rect::from_center_size(r.center(), vec2(14.0, 14.0)), icon, if on { t.text } else { t.icon });
+                        if resp.hovered() {
+                            ui.painter().rect_filled(r, CornerRadius::same(5), t.hover);
+                        }
+                        if resp.clicked() {
+                            let h_str = match h {
+                                HConstraint::Left => "left",
+                                HConstraint::Center => "center",
+                                HConstraint::Right => "right",
+                                HConstraint::LeftRight => "leftRight",
+                                HConstraint::Scale => "scale",
+                            };
+                            let v_str = match v {
+                                VConstraint::Top => "top",
+                                VConstraint::Center => "center",
+                                VConstraint::Bottom => "bottom",
+                                VConstraint::TopBottom => "topBottom",
+                                VConstraint::Scale => "scale",
+                            };
+                            app.set_props(&ids, json!({"constraints": {"horizontal": h_str, "vertical": v_str}}));
+                        }
+                    }
+                });
+            }
         });
-        picked.response.on_disabled_hover_text(tr("A layer on its own aligns to its frame: select more layers, or one in a frame"));
-        if let Some(i) = picked.inner {
-            app.run(cmds[i], json!({"ids": ids}));
-        }
         if sel.len() > 2 {
             let more = icons::button(ui, Icon::DistributeH, 24.0, false, tr("Distribute and tidy"));
             menu_popup(&more).show(|ui| {
@@ -662,12 +710,12 @@ fn position_fields(app: &mut FigApp, ui: &mut Ui, doc: &Document, sel: &[NodeId]
     row(ui, 32.0, |ui| {
         let e = widgets::number_field_mixed(ui, Id::new("pos_rot"), Lead::Icon(Icon::Angle, tr("Rotation")), rot, "°", col, 1.0);
         app.field_of(&ids, "rotation", e, rot_of, |v| json!(v));
-        let items = [
+        let flip_items = [
             (Icon::Rotate, tr("Rotate 90° right")),
             (Icon::FlipH, crate::shortcuts::tip(tr("Flip horizontal"), "object.flipH")),
             (Icon::FlipV, crate::shortcuts::tip(tr("Flip vertical"), "object.flipV")),
         ];
-        if let Some(i) = widgets::segmented(ui, &items, None, col / 3.0) {
+        if let Some(i) = widgets::segmented(ui, &flip_items, None, col / 3.0) {
             app.run(["object.rotateRight", "object.flipH", "object.flipV"][i], json!({"ids": ids}));
         }
     });
