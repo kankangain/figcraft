@@ -1,0 +1,24 @@
+
+services:
+  figcraft-server:
+    build:
+      context: .
+      dockerfile: packaging/server/Dockerfile
+
+    restart: unless-stopped
+
+    volumes:
+      - figcraft-data:/data
+
+    networks:
+      - dokploy-network
+
+    expose:
+      - "47900"
+
+volumes:
+  figcraft-data:
+
+networks:
+  dokploy-network:
+    external: true
