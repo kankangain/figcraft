@@ -2,3 +2,4 @@
 listen = "0.0.0.0:47900"
 data = "/data"
 public_url = "${FIGCRAFT_PUBLIC_URL}"
+open_publish = true
