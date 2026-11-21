@@ -1,0 +1,27 @@
+
+services:
+  figcraft-server:
+    build:
+      context: .
+      dockerfile: packaging/server/Dockerfile
+
+    restart: unless-stopped
+    stop_grace_period: 30s
+
+    command:
+      - --listen
+      - 0.0.0.0:47900
+      - --data
+      - /data
+      - --public-url
+      - ${FIGCRAFT_PUBLIC_URL}
+
+    expose:
+      - "47900"
+
+    volumes:
+      - figcraft-data:/data
+
+volumes:
+  figcraft-data:
+    name: figcraft-server-data
