@@ -1,9 +1,7 @@
 
 services:
   figcraft-server:
-    build:
-      context: .
-      dockerfile: packaging/server/Dockerfile
+    image: ghcr.io/oxxywhite/figcraft-server:latest
 
     restart: unless-stopped
     stop_grace_period: 30s
