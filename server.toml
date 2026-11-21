@@ -1,0 +1,14 @@
+listen = "0.0.0.0:47900"
+data = "/data"
+public_url = "wss://fig.oxxyhosting.com:443/"
+open_publish = true
+operator_contact = "abuse@oxxyhosting.com"
+terms_url = "https://fig.oxxyhosting.com/terms"
+idle_days = 30
+max_file_mb = 8
+max_plugin_mb = 8
+max_total_mb = 6144
+max_files_per_ip = 20
+max_mb_per_ip = 256
+messages_per_second = 600
+connects_per_minute = 60
