@@ -12,7 +12,7 @@ WORKDIR /src
 COPY . .
 RUN cargo build --release --locked -p figcraft-server \
  && mkdir -p /out/data \
- && printf 'listen = "0.0.0.0:47900"\ndata = "/data"\n' > /out/server.toml
+ && printf 'listen = "0.0.0.0:47900"\ndata = "/data"\nopen_publish = true\noperator_contact = "abuse@oxxyhosting.com"\nterms_url = "https://fig.oxxyhosting.com/terms"\n' > /out/server.toml
 
 # glibc and libgcc only, no shell; "nonroot" is uid 65532.
 FROM gcr.io/distroless/cc-debian12:nonroot

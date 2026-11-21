@@ -19,7 +19,6 @@ services:
 
     volumes:
       - figcraft-data:/data
-      - ./server.toml:/etc/figcraft-server/server.toml:ro
 
 volumes:
   figcraft-data:
