@@ -11,3 +11,4 @@ plans/
 *.profraw
 .cache/
 .vscode/
+.env

@@ -1,7 +1,7 @@
 
 services:
   figcraft-server:
-    image: ghcr.io/oxxywhite/figcraft-server:latest
+    image: oxxywhite/figcraft-server:latest
 
     restart: unless-stopped
     stop_grace_period: 30s
@@ -14,8 +14,8 @@ services:
       - --public-url
       - ${FIGCRAFT_PUBLIC_URL}
 
-    expose:
-      - "47900"
+    ports:
+      - "47900:47900"
 
     volumes:
       - figcraft-data:/data
