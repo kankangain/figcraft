@@ -60,6 +60,7 @@ impl Running {
 pub fn start(cfg: &Config) -> Result<Running, String> {
     cfg.check()?;
     let store = Store::open(&cfg.data, cfg.store())?;
+    let key = store.key().to_string();
     for p in store.problems() {
         log::warn!("{p}");
     }
@@ -74,7 +75,7 @@ pub fn start(cfg: &Config) -> Result<Running, String> {
     let public = cli::public_endpoint(cfg, addr)?;
     let hosting = Hosting::serve(listener, store, cfg.net()).map_err(|e| format!("can't start serving: {e}"))?;
     log::info!(
-        "figcraft-server {}: {files} file{} in {}; listening on {addr}; links name {}",
+        "figcraft-server {}: {files} file{} in {}; listening on {addr}; links name {}; server key {key}",
         env!("CARGO_PKG_VERSION"),
         if files == 1 { "" } else { "s" },
         cfg.data.display(),
